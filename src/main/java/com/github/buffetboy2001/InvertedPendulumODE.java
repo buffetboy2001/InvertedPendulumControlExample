@@ -3,6 +3,8 @@
  */
 package com.github.buffetboy2001;
 
+import javax.swing.JFrame;
+
 import org.mitre.caasd.jlcl.components.FixedStepBackwardDiffentiatorArguments;
 import org.mitre.caasd.jlcl.components.FixedStepBackwardDifferentiator;
 import org.mitre.caasd.jlcl.components.FixedStepEulerIntegration;
@@ -12,6 +14,7 @@ import org.mitre.caasd.jlcl.components.PID;
 import org.mitre.caasd.jlcl.components.ProportionalIntegralDerivativeArguments;
 import org.mitre.caasd.jlcl.interfaces.IPID;
 import org.mitre.caasd.jlcl.interfaces.IPidEvaluationArguments;
+import org.opensourcephysics.frames.PlotFrame;
 import org.opensourcephysics.numerics.Euler;
 import org.opensourcephysics.numerics.ODE;
 import org.opensourcephysics.numerics.ODESolver;
@@ -22,6 +25,7 @@ import org.opensourcephysics.numerics.ODESolver;
  */
 public class InvertedPendulumODE implements ODE {
 
+	private double time = 0; // actually only needed for visualization
 	private double[] propogationState = new double[4], previousState = new double[4], previousPreviousState = new double[4]; // x, xdot, phi, phidot
 	private ODESolver solver = new Euler(this);
 	private boolean isAtPhiMax = false;
@@ -46,6 +50,9 @@ public class InvertedPendulumODE implements ODE {
 	// Derived constants
 	final double lengthOfPendulumSquared = lengthOfPendulum*lengthOfPendulum;
 	
+	// Visualization
+	private PlotFrame frame;
+	
 	public InvertedPendulumODE() {
 		
 		// Hardcode initial state
@@ -65,6 +72,9 @@ public class InvertedPendulumODE implements ODE {
 		differentiatorArgs = new FixedStepBackwardDiffentiatorArguments<Double>(Double.class,solver.getStepSize());
 		FixedStepBackwardDifferentiator<Double> differentiator = new FixedStepBackwardDifferentiator<Double>(Double.class);
 		pidController = new PID<Double,FixedStepIntegrator<Double,FixedStepIntegrationArguments<Double>>,FixedStepIntegrationArguments<Double>,FixedStepBackwardDifferentiator<Double>,FixedStepBackwardDiffentiatorArguments<Double>>(Double.class,propGain,integrator,intGain,differentiator,derivGain);
+		
+		// Prepare visualization
+		createPlotFrame();
 	}
 	
 	/* (non-Javadoc)
@@ -114,6 +124,7 @@ public class InvertedPendulumODE implements ODE {
 	
 	public void doSolverStep() {
 		// Calculate the pendulum equations of motion
+		time += stepSize; // only for visualization
 		solver.step();
 
 		// Calculate the controller output for the current state. Feedback phi only and the reference signal is 0. So, the error value is -phi.
@@ -122,16 +133,28 @@ public class InvertedPendulumODE implements ODE {
 		pidArgs.setIntegratorEvaluationArgs(integrationArgs);
 		pidArgs.setDifferentiatorEvaluationArgs(differentiatorArgs);
 		pidArgs.updateErrorSignalValue(-propogationState[2]);
-		System.out.println("Error Signal: " + pidArgs.getErrorSignalValue());
 		controlForce = pidController.evaluate(pidArgs);
-		System.out.println("controlForce: " + controlForce);
+		
+		// update plot
+		updatePlot(time, propogationState[2]);
+	}
+
+	private void createPlotFrame() {
+	    frame = new PlotFrame("Time (sec)", "Phi", "Controller Behavior"); 
+	    frame.setSize(400, 400);
+	    frame.setVisible(true);
+	    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	}
+	
+	private void updatePlot(double x, double y) {
+		frame.append(0, x, y);
 	}
 
 	public static void main(String[] args) {
 		InvertedPendulumODE ip = new InvertedPendulumODE(); 
 		for (int i = 0; i<1/stepSize;i++)
 			ip.doSolverStep();
-
+		
 	}
 	
 	public static void outputToConsole(String prefix, double[] array) {
