@@ -22,7 +22,7 @@ import org.opensourcephysics.numerics.ODESolver;
  */
 public class InvertedPendulumODE implements ODE {
 
-	private double[] propogationState = new double[4], previousState = new double[4]; // x, xdot, phi, phidot
+	private double[] propogationState = new double[4], previousState = new double[4], previousPreviousState = new double[4]; // x, xdot, phi, phidot
 	private ODESolver solver = new Euler(this);
 	private boolean isAtPhiMax = false;
 	private IPID<Double,FixedStepIntegrator<Double,FixedStepIntegrationArguments<Double>>,FixedStepIntegrationArguments<Double>,FixedStepBackwardDifferentiator<Double>,FixedStepBackwardDiffentiatorArguments<Double>> pidController = null;
@@ -51,8 +51,10 @@ public class InvertedPendulumODE implements ODE {
 		// Hardcode initial state
 		propogationState[0] = 0;
 		propogationState[1] = 0;
-		propogationState[2] = -1/57.3; // 1 degree left of center
+		propogationState[2] = 1/57.3; // radians, positive is left of center
 		propogationState[3] = 0;
+		previousState = propogationState;
+		previousPreviousState = previousPreviousState;
 		
 		// Set solver step size (time, seconds)
 		solver.initialize(stepSize);
@@ -88,7 +90,6 @@ public class InvertedPendulumODE implements ODE {
 		
 		// Rate Calculation based on the current state
 		double denominator = momentOfIntertiaPendulum*(cartMass+pendulumMass)+(pendulumMass*cartMass*lengthOfPendulumSquared);
-		double fixme = 0;
 		rate[0] = state[1]; // velocity of cart
 		rate[1] = state[1] * (-coefOfFriction*(momentOfIntertiaPendulum+pendulumMass*lengthOfPendulumSquared)/denominator) + state[2] * (pendulumMass*pendulumMass*gravityConst*lengthOfPendulumSquared/denominator);
 		rate[2] = state[3]; // rotation velocity of pendulum
@@ -98,10 +99,11 @@ public class InvertedPendulumODE implements ODE {
 		}
 		
 		// Add control mechanism and control force effects
-		rate[1] += (momentOfIntertiaPendulum+pendulumMass*lengthOfPendulumSquared)/denominator;
-		rate[3] += (pendulumMass*lengthOfPendulum)/denominator;
+		rate[1] += controlForce*(momentOfIntertiaPendulum+pendulumMass*lengthOfPendulumSquared)/denominator;
+		rate[3] += controlForce*(pendulumMass*lengthOfPendulum)/denominator;
 		
 		// Hold on to the latest state for the feedback loop
+		previousPreviousState = previousState;
 		previousState = propogationState;
 		propogationState = state;
 
@@ -116,10 +118,11 @@ public class InvertedPendulumODE implements ODE {
 
 		// Calculate the controller output for the current state. Feedback phi only and the reference signal is 0. So, the error value is -phi.
 		IPidEvaluationArguments<Double,FixedStepIntegrationArguments<Double>,FixedStepBackwardDiffentiatorArguments<Double>> pidArgs = new ProportionalIntegralDerivativeArguments<Double,FixedStepIntegrationArguments<Double>,FixedStepBackwardDiffentiatorArguments<Double>>(Double.class);
-		differentiatorArgs.updatePreviousFunctionValue(previousState[2]);
+		differentiatorArgs.updatePreviousFunctionValue(-previousState[2]);
 		pidArgs.setIntegratorEvaluationArgs(integrationArgs);
 		pidArgs.setDifferentiatorEvaluationArgs(differentiatorArgs);
 		pidArgs.updateErrorSignalValue(-propogationState[2]);
+		System.out.println("Error Signal: " + pidArgs.getErrorSignalValue());
 		controlForce = pidController.evaluate(pidArgs);
 		System.out.println("controlForce: " + controlForce);
 	}
@@ -132,6 +135,6 @@ public class InvertedPendulumODE implements ODE {
 	}
 	
 	public static void outputToConsole(String prefix, double[] array) {
-		System.out.println(prefix + ":\n\tx-pos: " + array[0] + "\n\tx-dot: " + array[1] + "\n\tphi: " + array[2] + "\n\tphi-dot: " + array[3]);		
+		System.out.println(prefix + ":\n\tx-pos: " + array[0] + "\n\tx-dot: " + array[1] + "\n\tphi: " + array[2]*57.3 + "\n\tphi-dot: " + array[3]);		
 	}
 }
