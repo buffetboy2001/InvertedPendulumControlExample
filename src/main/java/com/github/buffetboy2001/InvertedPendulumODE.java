@@ -36,9 +36,9 @@ public class InvertedPendulumODE implements ODE {
 	
 	// Constants of the solution
 	final static double stepSize = 0.01; // seconds
-	final double propGain = 100;
-	final double intGain = 1;
-	final double derivGain = 20;
+	final double propGain = 10;
+	final double intGain = 0.5;
+	final double derivGain = 10;
 	final double cartMass = 0.5; // kg
 	final double pendulumMass = 0.2; // kg
 	final double coefOfFriction = 0.1; // N/meter/sec
@@ -136,7 +136,7 @@ public class InvertedPendulumODE implements ODE {
 		controlForce = pidController.evaluate(pidArgs);
 		
 		// update plot
-		updatePlot(time, propogationState[2]);
+		updatePlot(time, propogationState[2]*180/Math.PI);
 	}
 
 	private void createPlotFrame() {
@@ -144,6 +144,8 @@ public class InvertedPendulumODE implements ODE {
 	    frame.setSize(400, 400);
 	    frame.setVisible(true);
 	    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setAutoscaleX(true);
+		frame.setAutoscaleY(true);
 	}
 	
 	private void updatePlot(double x, double y) {
@@ -151,10 +153,10 @@ public class InvertedPendulumODE implements ODE {
 	}
 
 	public static void main(String[] args) {
+		final double finalStopTime = 4; // seconds
 		InvertedPendulumODE ip = new InvertedPendulumODE(); 
-		for (int i = 0; i<1/stepSize;i++)
+		for (int i = 0; i<finalStopTime/ip.stepSize;i++)
 			ip.doSolverStep();
-		
 	}
 	
 	public static void outputToConsole(String prefix, double[] array) {
