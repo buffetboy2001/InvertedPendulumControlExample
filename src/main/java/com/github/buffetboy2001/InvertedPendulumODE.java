@@ -74,7 +74,7 @@ public class InvertedPendulumODE implements ODE {
 		pidController = new PID<Double,FixedStepIntegrator<Double,FixedStepIntegrationArguments<Double>>,FixedStepIntegrationArguments<Double>,FixedStepBackwardDifferentiator<Double>,FixedStepBackwardDiffentiatorArguments<Double>>(Double.class,propGain,integrator,intGain,differentiator,derivGain);
 		
 		// Prepare visualization
-		createPlotFrame();
+//		createPlotFrame();
 	}
 	
 	/* (non-Javadoc)
@@ -136,7 +136,7 @@ public class InvertedPendulumODE implements ODE {
 		controlForce = pidController.evaluate(pidArgs);
 		
 		// update plot
-		updatePlot(time, propogationState[2]*180/Math.PI);
+//		updatePlot(time, propogationState[2]*180/Math.PI);
 	}
 
 	private void createPlotFrame() {
